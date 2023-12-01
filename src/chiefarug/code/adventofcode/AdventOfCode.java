@@ -8,7 +8,7 @@ import java.io.InputStreamReader;
 
 public class AdventOfCode {
 
-    public static final Day day;
+    public static final Day day = new Day1();
 
     public static void main(String[] args) {
         BufferedReader reader;
