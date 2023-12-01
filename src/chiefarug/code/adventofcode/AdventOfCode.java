@@ -1,9 +1,10 @@
 package chiefarug.code.adventofcode;
 
-import java.io.*;
-import java.net.URL;
-import java.util.Scanner;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class AdventOfCode {
 
