@@ -35,13 +35,29 @@ public class Day1 implements Day {
     private static char getFirstDigit(String s) {
         for (int i = 0; i < s.length(); i++) {
             if (Character.isDigit(s.charAt(i))) return s.charAt(i);
+            Character number = getNumberAt(s, i);
+            if (number != null) return number;
         }
         throw new RuntimeException("No digit found in input string " + s);
     }
     private static char getLastDigit(String s) {
         for (int i = s.length() - 1; i > -1; i--) {
             if (Character.isDigit(s.charAt(i))) return s.charAt(i);
+            Character number = getNumberAt(s, i);
+            if (number != null) return number;
         }
-        throw new RuntimeException("No digit found in input string " + s);
+        throw new RuntimeException("No digit found in input string '" + s + "'");
+    }
+
+    private static final String[] numbers = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+    public static Character getNumberAt(String s, int startIndex) {
+        for (int i = 0; i < numbers.length; i++) {
+            if (s.substring(startIndex).startsWith(numbers[i])) {
+                Character c = Character.forDigit(i, 10);
+                if (c.equals('\u0000')) throw new RuntimeException("How did that happen? " + s.substring(startIndex));
+                return c;
+            }
+        }
+        return null;
     }
 }

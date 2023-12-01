@@ -32,15 +32,6 @@ public class AdventOfCode {
         }
     }
 
-    public static BufferedReader loadInput(String inputUrl) {
-        try {
-            URL url = new URL(inputUrl);
-            return new BufferedReader(new InputStreamReader(url.openStream()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public static void log(String s) {
         System.out.println(s);
     }
