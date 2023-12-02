@@ -53,6 +53,10 @@ public class Day2 implements Day {
         boolean isWithinTarget(Draw target) {
             return target.red() >= red() && target.green() >= green() && target.blue() >= blue();
         }
+
+        int getPower() {
+            return blue() * red() * green();
+        }
     }
 
     record Game(int id, List<Draw> draws) {
@@ -68,6 +72,18 @@ public class Day2 implements Day {
 
             return new Game(id, drawsList);
         }
+
+        Draw getMinimum() {
+            int red = 0;
+            int blue = 0;
+            int green = 0;
+            for (Draw draw : draws()) {
+                red = Math.max(red, draw.red());
+                blue = Math.max(blue, draw.blue());
+                green = Math.max(green, draw.green());
+            }
+            return new Draw(red, green, blue);
+        }
     }
 
     @Override
@@ -78,11 +94,12 @@ public class Day2 implements Day {
         try {
             input.lines()
                     .map(Game::parse)
-                    .filter(game -> game.draws().stream()
-                            .filter(d -> d.isWithinTarget(target))
-                            .count() == game.draws().size()
-                    )
-                    .forEach(game -> count.addAndGet(game.id()));
+//                    .filter(game -> game.draws().stream()
+//                            .filter(d -> d.isWithinTarget(target))
+//                            .count() == game.draws().size()
+//                    )
+                    .map(Game::getMinimum)
+                    .forEach(draw -> count.addAndGet(draw.getPower()));
         } catch (Exception e) {
             System.out.println("Count so far: " + count);
             throw e;
