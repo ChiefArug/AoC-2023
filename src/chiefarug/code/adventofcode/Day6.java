@@ -41,7 +41,6 @@ public class Day6 implements Day {
             }
 
 
-
             for (Race race : races) {
                 QuadraticSolution timesForRecord = QuadraticSolution.solve(-1, race.time, -race.recordDistance);
                 int minTime = ((int) Math.floor(timesForRecord.min)) + 1;
