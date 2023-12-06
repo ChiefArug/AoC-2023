@@ -23,7 +23,10 @@ public class AdventOfCode {
             }
         }
 
+        long start = System.currentTimeMillis();
         day.run(reader);
+        long end = System.currentTimeMillis();
+        System.out.println("Time taken: " + (end - start) + "ms");
 
         try {
             reader.close();
