@@ -11,7 +11,7 @@ public class Day7 implements Day {
 
     @SuppressWarnings("unused")
     enum Card {
-        A, K, Q, J, T, _9, _8, _7, _6, _5, _4, _3, _2;
+        A, K, Q, T, _9, _8, _7, _6, _5, _4, _3, _2, J;
 
         static Card fromChar(char c) {
             if (Character.isDigit(c)) return valueOf("_" + c);
@@ -35,11 +35,15 @@ public class Day7 implements Day {
 
         static WinType forCards(CardList cards) {
             WinType bestWin;
-            int uniques = EnumSet.of(cards.c1(), cards.c2(), cards.c3(), cards.c4(), cards.c5()).size();
+            EnumSet<Card> cardTypes = EnumSet.of(cards.c1(), cards.c2(), cards.c3(), cards.c4(), cards.c5());
+            int uniques = cardTypes.size();
 
+            final int jokerCount = cards.getJokerCount();
             bestWin = switch (uniques) {
                 case 1 -> FIVE_OF_A_KIND;
                 case 2 -> {
+                    if (jokerCount > 0) yield FIVE_OF_A_KIND;
+
                     Card[] sortedCards = new Card[5];
                     System.arraycopy(cards.cards, 0, sortedCards, 0, 5);
                     Arrays.sort(sortedCards);
@@ -59,24 +63,38 @@ public class Day7 implements Day {
                             m++;
                         else {
                             if (m == 1) continue;
-                            yield switch (m) {
-                                case 2 -> TWO_PAIRS;
-                                case 3 -> THREE_OF_A_KIND;
-                                default -> throw new WatException();
-                            };
+                            yield getThreeCaseFromSameCardCountAndJokerCount(m, jokerCount);
                         }
                     }
-                    yield switch (m) {
-                        case 2 -> TWO_PAIRS;
-                        case 3 -> THREE_OF_A_KIND;
-                        default -> throw new WatException();
-                    };
+                    yield getThreeCaseFromSameCardCountAndJokerCount(m, jokerCount);
                 }
-                case 4 -> ONE_PAIR;
-                case 5 -> HIGH_CARD;
+                case 4 -> {
+                    if (jokerCount > 0) yield THREE_OF_A_KIND;
+                    yield ONE_PAIR;
+                }
+                case 5 -> {
+                    if (jokerCount > 0) yield ONE_PAIR;
+                    yield HIGH_CARD;
+                }
                 default -> throw new WatException();
             };
             return bestWin;
+        }
+
+        @NotNull
+        private static WinType getThreeCaseFromSameCardCountAndJokerCount(int m, int jokerCount) {
+            return switch (m) {
+                case 2 -> {
+                    if (jokerCount == 1) yield FULL_HOUSE;
+                    if (jokerCount > 1) yield FOUR_OF_A_KIND;
+                    yield TWO_PAIRS;
+                }
+                case 3 -> {
+                    if (jokerCount >= 0) yield FOUR_OF_A_KIND;
+                    yield THREE_OF_A_KIND;
+                }
+                default -> throw new WatException();
+            };
         }
     }
 
@@ -109,6 +127,14 @@ public class Day7 implements Day {
         @Override
         public String toString() {
             return Arrays.toString(cards);
+        }
+
+        int getJokerCount() {
+            int count = 0;
+            for (Card card : cards) {
+                if (card == Card.J) count++;
+            }
+            return count;
         }
     }
 
@@ -146,6 +172,7 @@ public class Day7 implements Day {
         long winnings = 0;
 
         ResultHand[] sortedResults = input.lines()
+                .filter(s -> s.indexOf('J') != -1)
                 .map(s -> new Hand(Card.fromString(s.substring(0, 5)), Integer.parseInt(s.substring(6))))
                 .map(ResultHand::fromHand)
                 .sorted(Comparator.reverseOrder())
@@ -154,7 +181,7 @@ public class Day7 implements Day {
         for (int i = 0; i < sortedResults.length; i++) {
             winnings += (i + 1L) * sortedResults[i].bid();
         }
-
+        System.out.println(Arrays.toString(sortedResults));
         System.out.println(winnings);
     }
 
