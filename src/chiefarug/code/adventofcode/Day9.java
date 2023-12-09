@@ -9,14 +9,14 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Day9 implements Day {
 
     record ReportLine(int[] original, List<int[]> predicted) {
-        int getNextPredicted() {
+        int getPreviousPredicted() {
             int next = 0;
             for (int i = predicted.size() - 1; i >= 0; i--) {
                 int[] currentLevel = predicted.get(i);
-                int last = currentLevel[currentLevel.length - 1];
-                next = last + next;
+                int last = currentLevel[0];
+                next = last - next;
             }
-            return original[original.length - 1] + next;
+            return original[0] - next;
         }
     }
 
@@ -55,7 +55,7 @@ public class Day9 implements Day {
                         while (!allTheSame(currentArray));
                         return new ReportLine(ia, levels);
                     })
-                    .mapToInt(ReportLine::getNextPredicted)
+                    .mapToInt(ReportLine::getPreviousPredicted)
                     .forEach(count::addAndGet);
             System.out.println(count);
         } catch (Exception e) {
