@@ -1,9 +1,15 @@
 package chiefarug.code.adventofcode;
 
 import java.io.BufferedReader;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static chiefarug.code.adventofcode.Day10.PipeSegment.*;
 
 public class Day10 implements Day {
 
@@ -38,10 +44,10 @@ public class Day10 implements Day {
         }
     }
 
-    record Map(String[] lines) {
+    record Map(char[][] lines) {
         PipeSegment get(Pos pos) {
-            if (pos.y < 0 || pos.y >= ySize() || pos.x < 0 || pos.x >= xSize()) return PipeSegment.GROUND;
-            return PipeSegment.forCharacter(lines[pos.y()].charAt(pos.x));
+            if (pos.y < 0 || pos.y >= ySize() || pos.x < 0 || pos.x >= xSize()) return GROUND;
+            return PipeSegment.forCharacter(lines[pos.y()][pos.x]);
         }
 
         int ySize() {
@@ -49,16 +55,27 @@ public class Day10 implements Day {
         }
 
         int xSize() {
-            return lines[0].length();
+            return lines[0].length;
         }
 
-        String getLine(int y) {
+        char[] getLine(int y) {
             return lines[y];
+        }
+
+        void set(Pos pos, PipeSegment pipe) {
+            lines[pos.y][pos.x] = pipe.represent;
         }
 
         @Override
         public String toString() {
-            return String.join("\n", lines);
+            return Arrays.stream(lines)
+                    .map(String::new)
+                    .map(s -> {
+                        for (PipeSegment value : PipeSegment.values())
+                            s = s.replace(String.valueOf(value.represent), value.boxChar);
+                        return s;
+                    })
+                    .collect(Collectors.joining("\n"));
         }
     }
 
@@ -103,20 +120,22 @@ public class Day10 implements Day {
     }
 
     enum PipeSegment {
-        NORTH_SOUTH('|', Pos::north, Pos::south),
-        EAST_WEST('-', Pos::east, Pos::west),
-        NORTH_EAST('L', Pos::north, Pos::east),
-        SOUTH_WEST('7', Pos::south, Pos::west),
-        SOUTH_EAST('F', Pos::south, Pos::east),
-        NORTH_WEST('J', Pos::north, Pos::west),
-        GROUND('.', null, null) {
+        NORTH_SOUTH('|', "│", Pos::north, Pos::south),
+        EAST_WEST('-', "─", Pos::east, Pos::west),
+        NORTH_EAST('L', "└", Pos::north, Pos::east),
+        SOUTH_WEST('7', "┐", Pos::south, Pos::west),
+        SOUTH_EAST('F', "┌", Pos::south, Pos::east),
+        NORTH_WEST('J', "┘", Pos::north, Pos::west),
+        GROUND('.', "░", null, null) {
             @Override
             boolean isPipe() {
                 return false;
             }
         },
-        ANIMAL('S', null, null);
+        ANIMAL('S', "▚", null, null),
+        POSSIBLE_NEST('N', "█", null, null);
         private final char represent;
+        private final String boxChar;
         private final Offset offset1;
         private final Offset offset2;
 
@@ -128,8 +147,9 @@ public class Day10 implements Day {
             }
         }
 
-        PipeSegment(char represent, Offset offset1, Offset offset2) {
+        PipeSegment(char represent, String boxChar, Offset offset1, Offset offset2) {
             this.represent = represent;
+            this.boxChar = boxChar;
             this.offset1 = offset1;
             this.offset2 = offset2;
         }
@@ -175,10 +195,10 @@ public class Day10 implements Day {
 
     @Override
     public void run(BufferedReader input) {
-        Map map = new Map(input.lines().toArray(String[]::new));
+        Map map = new Map(input.lines().map(String::toCharArray).toArray(char[][]::new));
         Pos tmpStartingPos = null;
         for (int i = 0; i < map.ySize(); i++) {
-            String line = map.getLine(i);
+            String line = new String(map.getLine(i));
             int sIndex = line.indexOf("S");
             if (sIndex != -1) {
                 tmpStartingPos = new Pos(i, sIndex);
@@ -199,18 +219,67 @@ public class Day10 implements Day {
 
         PipeSegment startingPipeSegment = PipeSegment.fromConnections(nextPipe1.get(), nextPipe2.get());
 
+        Set<Pos> pipe = new HashSet<>();
+        pipe.add(startingPos);
+
         int moves = 0;
         Pos previousPos = startingPos;
         Pos currentPos = nextPipe1.get();
         while (!currentPos.equals(startingPos)) {
+            pipe.add(currentPos);
             Pos oldCurrentPos = currentPos;
             currentPos = currentPos.getNextInLine(map, previousPos, map.get(currentPos));
             previousPos = oldCurrentPos;
             moves++;
         }
 
-        System.out.println((moves / 2) + 1);
+        Map pipeOnly = new Map(new char[map.ySize()][map.xSize()]);
+        pipeOnly.set(startingPos, ANIMAL);
+        int count = 0;
+        boolean insidePipe = false;
+        String previousDirection = "";
 
+        for (int y = 0; y < map.ySize(); y++) {
+            for (int x = 0; x < map.xSize(); x++) {
+                Pos pos = new Pos(y, x);
+                if (pipe.contains(pos)) {
+                    PipeSegment pipeAt = map.get(pos);
+                    if (pipeAt != EAST_WEST) {
+                        switch (pipeAt) {
+                            case NORTH_EAST -> {
+                                previousDirection = "north";
+                                insidePipe = !insidePipe;
+                            }
+                            case SOUTH_EAST -> {
+                                previousDirection = "south";
+                                insidePipe = !insidePipe;
+                            }
+                            case SOUTH_WEST -> {
+                                if (previousDirection.equals("south")) insidePipe = !insidePipe;
+                            }
+                            case NORTH_WEST ->  {
+                                if (previousDirection.equals("north")) insidePipe = !insidePipe;
+                            }
+                            case NORTH_SOUTH, ANIMAL -> insidePipe = !insidePipe; // we can do this cause the animal in my input is a |
+                        }
+                    }
+                    pipeOnly.set(pos, map.get(pos));
+                } else if (insidePipe) {
+                    previousDirection = "";
+                    count++;
+                    pipeOnly.set(pos, POSSIBLE_NEST);
+                } else {
+                    previousDirection = "";
+                    pipeOnly.set(pos, GROUND);
+                }
+            }
+        }
+
+        System.out.println(map);
+        System.out.println();
+        System.out.println(pipeOnly);
+
+        System.out.println(count);
     }
 
     @Override
