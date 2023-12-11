@@ -5,9 +5,14 @@ import org.jetbrains.annotations.NotNull;
 import java.io.BufferedReader;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY;
+import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY_BUT_COUNTED;
+import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY_BUT_ONE_MILLION;
+import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY_BUT_ONE_MILLION_BUT_COUNTED;
+import static java.util.stream.Collectors.joining;
 
 public class Day11 implements Day {
 
@@ -15,7 +20,22 @@ public class Day11 implements Day {
     }
 
     enum EmptySpace implements SpaceTile {
-        EMPTY;
+        EMPTY, EMPTY_BUT_COUNTED {
+            @Override
+            public String toString() {
+                return "---|---";
+            }
+        }, EMPTY_BUT_ONE_MILLION {
+            @Override
+            public String toString() {
+                return "EMPTIER";
+            }
+        }, EMPTY_BUT_ONE_MILLION_BUT_COUNTED {
+            @Override
+            public String toString() {
+                return "-||-||-";
+            }
+        };
 
         @Override
         public String toString() {
@@ -33,16 +53,17 @@ public class Day11 implements Day {
             starMap[id] = pos;
         }
 
-        record Tmp() implements SpaceTile {}
+        record Tmp() implements SpaceTile {
+        }
 
         public static void recalculate(SpaceMap spaceMap) {
             counter = 0;
             Pos[] oldStarMap = starMap;
             starMap = new Pos[500];
             for (Pos pos : spaceMap) {
-                if (spaceMap.get(pos) == EMPTY) continue;
+                SpaceTile spaceTile = spaceMap.get(pos);
+                if (spaceTile == EMPTY || spaceTile == EMPTY_BUT_ONE_MILLION) continue;
                 starMap[counter] = pos;
-                spaceMap.tiles[pos.y][pos.x] = new Tmp();
 //                System.out.println(counter + " Old: " + oldStarMap[counter] + " New: " + pos);
                 counter++;
             }
@@ -73,43 +94,35 @@ public class Day11 implements Day {
             int extraRowCount = antiCount(rowHasGalaxy);
 
             SpaceTile[][] oldTiles = tiles;
-            tiles = new SpaceTile[oldTiles.length + extraRowCount][oldTiles[0].length + extraColumnCount];
-            SpaceTile[] emptyRow = new SpaceTile[oldTiles[0].length + extraColumnCount];
-            Arrays.fill(emptyRow, EMPTY);
+            tiles = new SpaceTile[oldTiles.length][oldTiles[0].length];
+            SpaceTile[] emptyRow = new SpaceTile[oldTiles[0].length];
+            Arrays.fill(emptyRow, EMPTY_BUT_ONE_MILLION);
 
 
-            for (int yOld = 0, y = 0; yOld < oldTiles.length; yOld++, y++) {
-                if (!rowHasGalaxy[yOld]) {
-                    tiles[y++] = emptyRow;
+            for (int y = 0; y < oldTiles.length; y++)
+                if (!rowHasGalaxy[y])
                     tiles[y] = emptyRow;
-                    continue;
-                }
-                for (int xOld = 0, x = 0; xOld < oldTiles[yOld].length; xOld++, x++) {
-                    if (!columnHasGalaxy[xOld]) {
-                        tiles[y][x++] = EMPTY;
-                        tiles[y][x] = EMPTY;
-                        continue;
-                    }
-                    tiles[y][x] = oldTiles[yOld][xOld];
-                }
-            }
+                else
+                    for (int x = 0; x < oldTiles[y].length; x++)
+                        if (!columnHasGalaxy[x]) tiles[y][x] = EMPTY_BUT_ONE_MILLION;
+                        else tiles[y][x] = oldTiles[y][x];
 
-//            System.out.println(
-//                    Arrays.stream(oldTiles)
-//                            .map(s -> Arrays.stream(s)
-//                                    .map(Objects::toString)
-//                                    .collect(Collectors.joining()))
-//                            .collect(Collectors.joining("\n"))
-//            );
-//            System.out.println();
-//            System.out.println(
-//                    Arrays.stream(tiles)
-//                            .map(s -> Arrays.stream(s)
-//                                    .map(Objects::toString)
-//                                    .map(st -> st == "null" ? " null  " : st)
-//                                    .collect(Collectors.joining()))
-//                            .collect(Collectors.joining("\n"))
-//            );
+            System.out.println(
+                    Arrays.stream(oldTiles)
+                            .map(s -> Arrays.stream(s)
+                                    .map(Objects::toString)
+                                    .collect(joining()))
+                            .collect(joining("\n"))
+            );
+            System.out.println();
+            System.out.println(
+                    Arrays.stream(tiles)
+                            .map(s -> Arrays.stream(s)
+                                    .map(Objects::toString)
+                                    .map(st -> st == "null" ? " null  " : st)
+                                    .collect(joining()))
+                            .collect(joining("\n"))
+            );
 
         }
 
@@ -125,7 +138,6 @@ public class Day11 implements Day {
         @NotNull
         @Override
         public Iterator<Pos> iterator() {
-
 
             return new Iterator<>() {
                 Iterator<Integer> x = IntStream.range(0, tiles[0].length).iterator();
@@ -181,30 +193,51 @@ public class Day11 implements Day {
         spaceMap.expand(columnHasGalaxy, rowHasGalaxy);
 
         Galaxy.recalculate(spaceMap);
-//        System.out.println(
-//                Arrays.stream(spaceMap.tiles)
-//                        .map(s -> Arrays.stream(s)
-//                                .map(Objects::toString)
-//                                .map(st -> st == "null" ? " null  " : st) // we can do this cause of interning
-//                                .collect(Collectors.joining()))
-//                        .collect(Collectors.joining("\n"))
-//        );
+
 
         long counter = 0;
 
         for (int galaxy = 0; galaxy < Galaxy.counter; galaxy++) {
-            Pos pos1 = Galaxy.starMap[galaxy];
+            Pos galaxyPos = Galaxy.starMap[galaxy];
             for (int otherGalaxy = galaxy + 1; otherGalaxy < Galaxy.counter; otherGalaxy++) {
-                Pos pos2 = Galaxy.starMap[otherGalaxy];
-                int distance = Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+                Pos otherGalaxyPos = Galaxy.starMap[otherGalaxy];
+                int distance = 0;
+                for (int y = Math.min(galaxyPos.y, otherGalaxyPos.y); y <= Math.max(galaxyPos.y, otherGalaxyPos.y); y++) {
+                    for (int x = Math.min(galaxyPos.x, otherGalaxyPos.x); x <= Math.max(galaxyPos.x, otherGalaxyPos.x); x++) {
+                        SpaceTile tile = spaceMap.get(new Pos(x, y));
+                        if (!(tile instanceof Galaxy)) spaceMap.tiles[x][y] = EMPTY_BUT_COUNTED;
+                        if (tile == EMPTY_BUT_ONE_MILLION || tile == EMPTY_BUT_ONE_MILLION_BUT_COUNTED) {
+                            spaceMap.tiles[x][y] = EMPTY_BUT_ONE_MILLION_BUT_COUNTED;
+                            distance += 1_000_000;
+                        } else {
+                            distance++;
+                        }
+                    }
+                }
                 counter += distance;
 //                System.out.printf("Distance between Star%03d and Star%03d: " + distance + "%n", galaxy, otherGalaxy);
             }
         }
+        System.out.println();
+        System.out.println(
+                Arrays.stream(spaceMap.tiles)
+                        .map(s -> Arrays.stream(s)
+                                .map(Objects::toString)
+                                .map(st -> st == "null" ? " null  " : st) // we can do this cause of interning
+                                .collect(joining()))
+                        .collect(joining("\n"))
+        );
 
         System.out.println(counter);
     }
 
+    /*
+    attempted answers for p2:
+    473011912 (too low)
+    4000142 (not tried)
+    406726138763 (too high)
+    19182662716510 (not tried)
+     */
     @Override
     public int number() {
         return 11;
