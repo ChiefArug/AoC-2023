@@ -9,9 +9,7 @@ import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY;
-import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY_BUT_COUNTED;
 import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY_BUT_ONE_MILLION;
-import static chiefarug.code.adventofcode.Day11.EmptySpace.EMPTY_BUT_ONE_MILLION_BUT_COUNTED;
 import static java.util.stream.Collectors.joining;
 
 public class Day11 implements Day {
@@ -20,20 +18,10 @@ public class Day11 implements Day {
     }
 
     enum EmptySpace implements SpaceTile {
-        EMPTY, EMPTY_BUT_COUNTED {
-            @Override
-            public String toString() {
-                return "---|---";
-            }
-        }, EMPTY_BUT_ONE_MILLION {
+        EMPTY, EMPTY_BUT_ONE_MILLION {
             @Override
             public String toString() {
                 return "EMPTIER";
-            }
-        }, EMPTY_BUT_ONE_MILLION_BUT_COUNTED {
-            @Override
-            public String toString() {
-                return "-||-||-";
             }
         };
 
@@ -203,9 +191,7 @@ public class Day11 implements Day {
                 int x = Math.min(galaxyPos.x, otherGalaxyPos.x);
                 for (; y <= Math.max(galaxyPos.y, otherGalaxyPos.y); y++) {
                     SpaceTile tile = spaceMap.get(new Pos(x, y));
-                    if (!(tile instanceof Galaxy)) spaceMap.tiles[x][y] = EMPTY_BUT_COUNTED;
-                    if (tile == EMPTY_BUT_ONE_MILLION || tile == EMPTY_BUT_ONE_MILLION_BUT_COUNTED) {
-                        spaceMap.tiles[x][y] = EMPTY_BUT_ONE_MILLION_BUT_COUNTED;
+                    if (tile == EMPTY_BUT_ONE_MILLION) {
                         distance += 1_000_000;
                     } else {
                         distance++;
@@ -214,9 +200,7 @@ public class Day11 implements Day {
                 y = Math.min(galaxyPos.y, otherGalaxyPos.y); // reset y cause y not
                 for (; x <= Math.max(galaxyPos.x, otherGalaxyPos.x); x++) {
                     SpaceTile tile = spaceMap.get(new Pos(x, y));
-                    if (!(tile instanceof Galaxy)) spaceMap.tiles[x][y] = EMPTY_BUT_COUNTED;
-                    if (tile == EMPTY_BUT_ONE_MILLION || tile == EMPTY_BUT_ONE_MILLION_BUT_COUNTED) {
-                        spaceMap.tiles[x][y] = EMPTY_BUT_ONE_MILLION_BUT_COUNTED;
+                    if (tile == EMPTY_BUT_ONE_MILLION) {
                         distance += 1_000_000;
                     } else {
                         distance++;
@@ -246,6 +230,7 @@ public class Day11 implements Day {
     406726138763 (too high)
     19182662716510 (not tried)
     299901032031 (too low)
+    406725925206 (not correct)
      */
     @Override
     public int number() {
