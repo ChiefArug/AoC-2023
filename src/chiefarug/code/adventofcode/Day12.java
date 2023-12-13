@@ -2,6 +2,8 @@ package chiefarug.code.adventofcode;
 
 import java.io.BufferedReader;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,41 +29,50 @@ public class Day12 implements Day {
         }
     }
 
+    record CacheKey(String springSet, int damageLengthIndex, int startIndex) {
+    }
+    record CacheValue(int permutations, String sourceString) {}
+
     static final class SpringGroup {
         private final String springs;
-        private final String allDamaged;
         private final int[] damageLengths;
 
         SpringGroup(String springs, int[] damageLengths) {
             this.springs = springs;
-            this.allDamaged = springs.replaceAll("\\?", "#");
             this.damageLengths = damageLengths;
         }
 
+        private static final Map<CacheKey, CacheValue> matchToPermutationsCache = new HashMap<>();
+        long cacheHits = 0;
+
         int check() {
-            StringBuilder current = new StringBuilder(springs);
             int subIndex = 0;
             int permutations = 0;
 
             System.out.println("\nLooking for: " + springs + " with damage lengths " + Arrays.toString(damageLengths));
-            permutations += findMatches(current, subIndex, 0);
+            permutations += findMatches(springs, subIndex, 0);
+            System.out.println("Cache hits: " + cacheHits);
 
             System.out.println("Combinations found: " + permutations);
             return permutations;
         }
 
-        private int findMatches(final StringBuilder original, int startIndex, int damageLengthsIndex) {
+        private int findMatches(final String original, int startIndex, int damageLengthsIndex) {
             int permutations = 0;
             final boolean isLast = damageLengthsIndex + 1 >= damageLengths.length;
 
             do {
+                // AREA: setup
                 StringBuilder current = new StringBuilder(original);
                 int damageLength = damageLengths[damageLengthsIndex];
+
                 Matcher match = regexes[damageLength].matcher(current);
                 match.useTransparentBounds(true); // allow matching . outside of the bounds
 
                 match.region(startIndex, match.regionEnd());
 
+
+                // AREA: Find a match
                 if (!match.find()) {
 //                    System.out.println("Skipping combination for inserting damage length of " + damageLength + " into " + current + " (originally " + springs + " ) as no valid spot was found");
                     return permutations;
@@ -70,6 +81,7 @@ public class Day12 implements Day {
                 final int matchStart = start;
                 int end = match.end();
 
+                // AREA: Get the string to insert
                 StringBuilder toInsert = new StringBuilder(damaged[damageLength]);
                 if (start != 0) {
                     toInsert.insert(0, '.');
@@ -80,22 +92,42 @@ public class Day12 implements Day {
                     end++; // move end to the right by one
                 }
                 if (end - start != toInsert.length()) throw new WatException("oops");
-                current.replace(start, end, toInsert.toString());
-                startIndex = matchStart + 1;
 
+                // AREA: Insert the string and set the new start searching from index. The replacement is for debug and printing purposes
+                current.replace(start, end, toInsert.toString());
+                startIndex = matchStart;
+                do {startIndex++;} while (startIndex < original.length() && original.charAt(startIndex) == '.'); // skip blank sections
+
+                // AREA: Process the next permutation(s)
                 if (!isLast) {
                     int newPermutations;
                     int startSearchPoint = end - 1; // subtract one to undo the first ++ operation
                     do {
-                        newPermutations = findMatches(current, ++startSearchPoint, damageLengthsIndex + 1);
+                        CacheKey mtc = new CacheKey(springs, damageLengthsIndex + 1, ++startSearchPoint);
+                        if (!matchToPermutationsCache.containsKey(mtc)) {
+                            // pass the current one in instead of the root one for debugging purposes. it should work perfectly fine using the root one though
+                            newPermutations = findMatches(current.toString(), mtc.startIndex, mtc.damageLengthIndex);
+                            matchToPermutationsCache.put(mtc, new CacheValue(newPermutations, current.toString()));
+                        } else {
+//                            System.out.println("cache hit");
+                            cacheHits++;
+                            CacheValue value = matchToPermutationsCache.get(mtc);
+                            newPermutations = value.permutations;
+//                            if (newPermutations != findMatches(current.toString(), mtc.startIndex, mtc.damageLengthIndex))
+//                                System.out.println("Bad cache hit!");
+                        }
                     } while (newPermutations < 1 && startSearchPoint + 1 < current.length());
-                    if (newPermutations == 0) continue; //if we really didn't find anything, we cant do much more with this current setup, so move to find the next match
+                    if (newPermutations == 0)
+                        continue; //if we really didn't find anything, we cant do much more with this current setup, so move to find the next match
                     // if we did find something add its permutations up
                     permutations += (newPermutations - 1);
                 } else {
                     // this is the last one, check if there are more groups than there should be (caused by additional # after the last match we replaced)
                     if (anyGroup.matcher(current).results().count() != damageLengths.length) return permutations;
                 }
+
+
+                // AREA: Do cleanup and fancy printing
                 if (springs.length() != current.length()) throw new WatException("oops");
                 if (isLast)
 //                    System.out.println("Found permutation for " + springs + " " + Arrays.toString(damageLengths) + "! " + current.toString().replace('?', '.'));
@@ -111,6 +143,8 @@ public class Day12 implements Day {
         try {
             input.lines()
                     .map(s -> s.split(" "))
+                    .peek(s -> byFive(s, 0, '?'))
+                    .peek(s -> byFive(s, 1, ','))
                     .map(s -> new SpringGroup(s[0], Arrays.stream(s[1].split(",")).mapToInt(Integer::parseInt).toArray()))
                     .mapToInt(SpringGroup::check)
                     .forEach(sum::addAndGet);
@@ -124,6 +158,10 @@ public class Day12 implements Day {
 
     }
 
+    private static void byFive(String[] s, int index, char separator) {
+        s[index] = s[index] + separator + s[index] + separator + s[index] + separator + s[index] + separator + s[index];
+    }
+
     @Override
     public int number() {
         return 12;
@@ -132,5 +170,6 @@ public class Day12 implements Day {
     answers tried
     9241 (too high)
     5925 (too low)
+    **** CORRECT!
      */
 }
