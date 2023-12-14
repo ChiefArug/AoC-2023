@@ -3,9 +3,10 @@ package chiefarug.code.adventofcode;
 import org.jetbrains.annotations.Contract;
 
 import java.io.BufferedReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.PrimitiveIterator;
 import java.util.stream.IntStream;
@@ -16,13 +17,15 @@ import static chiefarug.code.adventofcode.Day14.ShiftDirection.NEGATIVE;
 import static chiefarug.code.adventofcode.Day14.ShiftDirection.POSITIVE;
 
 public class Day14 implements Day {
+
+    // this code will (probably) brute force it given enough time (i recommend re-adding the cache for that), but i couldnt be bothered waiting so see the day14.xlsx spreadsheet for me working it out
     @Override
     public void run(BufferedReader input) {
         KindaHeavyMap map = new KindaHeavyMap(input.lines()
                 .map(String::toCharArray)
                 .toArray(char[][]::new));
         System.out.println(map);
-        IntStream.range(0, 1_000_000_000).forEach(_i -> map.spin());
+        IntStream.range(0, 1_000_000_000).forEach(i -> map.spin(i));
         System.out.println(map.countWeight());
     }
     static final class KindaHeavyMap {
@@ -55,70 +58,78 @@ public class Day14 implements Day {
         }
 
 
-        void spin() {
+
+        void spin(int number) {
             for (Direction dir : Direction.values()) {
                 settleTowards(dir);
             }
+            cache.add(number, array);
+            if (number >= 501) {
+                cache.stream().mapToInt(c -> new KindaHeavyMap(c).countWeight()).filter(i -> i > 100301 && i < 100317).forEach(System.out::println);
+                throw new RuntimeException("early exit");
+            }
         }
 
-        LinkedHashMap<Settler, char[][]> cache = new LinkedHashMap<>(100, 0.5f);
+        List<char[][]>/*, char[][]>*/ cache = new ArrayList<>(500);//new LinkedHashMap<>(1000, 0.5f);
+        int cacheCounter;
 
         // Basic 'physics' simulation. We just move it until nothing moves.
 
         void settleTowards(Direction dir) {
             char[][] original = array;
-            Settler settler = new Settler(dir, original);
-            if (cache.containsKey(settler)) { // we already know what the result of this will be, which means we have encountered a loop!
-//                List<Settler> cacheButList = cache.keySet().stream().toList();
+//            Settler settler = new Settler(dir, original);
+//            if (cache.contains(settler) && cacheCounter++ > 1000) { // we already know what the result of this will be, which means we have encountered a loop!
+//                List<Settler> cacheButList = cache.stream().toList();
 //                // first find where the loop began.
 //                int counter = cacheButList.indexOf(settler);
 //
 //                System.out.println("Loop began at the " + counter + "stndth iteration");
 //                int ONE_BILLION = 1_000_000_000; // it's a big number, so we are allowed to shout
-//                int amountToEnterLoop = counter - 1;
-//                int amountLeftOf_ONE_BILLION_ForLoops = ONE_BILLION - amountToEnterLoop;
 //                int loopSize = cache.size() - counter;
+//                int amountToEnterLoop = counter - loopSize;
+//                int amountLeftOf_ONE_BILLION_ForLoops = ONE_BILLION - amountToEnterLoop;
 //                int remainder = amountLeftOf_ONE_BILLION_ForLoops % loopSize;
 //                int iterationToFetchFromCache = amountToEnterLoop + remainder + 2; // plus two to account for the two-off-by-one errors elsewhere (not sure where, but somewhere)
 //
-//                char[][] fetched = cache.get(cacheButList.get(iterationToFetchFromCache));
+////                char[][] fetched = cache.get(cacheButList.get(iterationToFetchFromCache));
 //
-//                throw new RuntimeException("I know the answer! It's: " + new KindaHeavyMap(fetched).countWeight()); // convenient way to exit
+//                cacheButList.stream().filter(s -> s.dir == Direction.NORTH).map(s -> new KindaHeavyMap(s.caa).countWeight()).forEach(System.out::println);
+//
+//                throw new RuntimeException("I know the answer! It's: " /*+ new KindaHeavyMap(fetched).countWeight()*/); // convenient way to exit
                 /* expected end for test case: (debug wiht this)
                 .....#....
                 ....#...O#
                 .....##...
                 ...#......
                 .....OOO#.
+
                 .O#...O#.#
                 ....O#...O
                 ......OOOO
                 #....###.O
                 #.OOO#..OO
                  */
-            }
-            int speed = 75;
-            int deltaspeed = 1;
+//            }
             do {
-                speed = Math.max(0, speed - ++deltaspeed);
                 original = array;
 
                 // the mutation of this.array is moved out here, and tickTilt changed to a static method to better communicate that it only mutates this.array
                 array = tickTiltTowards(dir, original);
 
-                System.out.flush();
-                String out = this.toString();
-                System.out.print("\033[H\033[2J");
-                System.out.println(dir);
-                System.out.println(out);
-                try {
-                    //noinspection BusyWait
-                    Thread.sleep(speed);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+//                System.out.flush();
+//                String out = this.toString();
+//                System.out.print("\033[H\033[2J");
+//                System.out.println(dir);
+//                System.out.println(out);
+//                try {
+//                    //noinspection BusyWait
+//                    Thread.sleep(speed);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
             } while (!Arrays.deepEquals(original, array));
-            cache.put(settler, array);
+//            cache.put(settler, array);
+//            cache.add(settler);
         }
 
         @Contract(pure = true)
@@ -340,6 +351,15 @@ public class Day14 implements Day {
     /*
     attempted answers:
     100301 (too low)
+    100195 (too low)
+    100317 (too high)
+    other found that may be submitted
+    100308 (iterationToFetch - 112)
+    100376 (-116)
+    100433 (-120)
+    100506 (-124)
+    100598 (-128)
+    100750 (-136)
      */
 
     @Override
