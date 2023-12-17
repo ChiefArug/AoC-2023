@@ -250,6 +250,7 @@ public class Day16 implements Day {
         AtomicInteger watched = new AtomicInteger(new Random().nextInt(contraptions.length));
 
         JFrame frame = new JFrame("Contraption " + watched.get());
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         JTextArea textArea = new JTextArea("hi", 110, 110);
         textArea.setBackground(Color.BLACK);
         textArea.setForeground(Color.YELLOW);
